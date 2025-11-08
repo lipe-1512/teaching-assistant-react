@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Student } from '../types/Student';
 
 interface StudentFormProps {
@@ -9,12 +9,30 @@ interface StudentFormProps {
 
 const StudentForm: React.FC<StudentFormProps> = ({ onSubmit, onCancel, editingStudent }) => {
   const [formData, setFormData] = useState({
-    name: editingStudent?.name || '',
-    cpf: editingStudent?.cpf || '',
-    email: editingStudent?.email || ''
+    name: '',
+    cpf: '',
+    email: ''
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Update form data when editingStudent changes
+  useEffect(() => {
+    if (editingStudent) {
+      setFormData({
+        name: editingStudent.name,
+        cpf: editingStudent.cpf,
+        email: editingStudent.email
+      });
+    } else {
+      // Reset form for new student
+      setFormData({
+        name: '',
+        cpf: '',
+        email: ''
+      });
+    }
+  }, [editingStudent]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,10 +40,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ onSubmit, onCancel, editingSt
     
     try {
       await onSubmit(formData);
-      if (!editingStudent) {
-        // Reset form only if adding new student
-        setFormData({ name: '', cpf: '', email: '' });
-      }
+      // Form will be reset by useEffect when editingStudent changes to null
     } finally {
       setIsSubmitting(false);
     }
@@ -60,7 +75,18 @@ const StudentForm: React.FC<StudentFormProps> = ({ onSubmit, onCancel, editingSt
 
   return (
     <form onSubmit={handleSubmit} className="student-form">
-      <h2>{editingStudent ? 'Edit Student' : 'Add New Student'}</h2>
+      <h2>
+        {editingStudent ? (
+          <>
+            Edit Student
+            <span style={{ fontSize: '0.8em', color: '#666', marginLeft: '10px' }}>
+              (CPF: {editingStudent.cpf})
+            </span>
+          </>
+        ) : (
+          'Add New Student'
+        )}
+      </h2>
       
       <div className="form-group">
         <label htmlFor="name">Name:</label>
@@ -71,7 +97,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ onSubmit, onCancel, editingSt
           value={formData.name}
           onChange={handleInputChange}
           required
-          placeholder="Enter student's full name"
+          placeholder={editingStudent ? "Student's full name" : "Enter student's full name"}
         />
       </div>
 
@@ -99,7 +125,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ onSubmit, onCancel, editingSt
           value={formData.email}
           onChange={handleInputChange}
           required
-          placeholder="student@example.com"
+          placeholder={editingStudent ? "Student's email address" : "student@example.com"}
         />
       </div>
 
