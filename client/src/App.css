@@ -404,9 +404,39 @@ tbody tr:last-child td {
   flex-direction: column;
 }
 
+.topic-row .form-group {
+  width: 100%;
+}
+
+.topic-row .form-group input {
+  font-size: 1.1rem;
+  padding: 0.875rem;
+  font-weight: 500;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.topic-row .form-group input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.topic-row .form-group label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #1f2937;
+}
+
+.year-semester-row {
+  max-width: 400px;
+  gap: 1.5rem;
+}
+
 .year-semester-row .form-group {
   flex: 1;
-  min-width: 150px;
+  min-width: 140px;
+  max-width: 180px;
 }
 
 .year-semester-row .form-group select {
