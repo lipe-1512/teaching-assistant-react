@@ -82,23 +82,18 @@ app.post('/api/students', (req: Request, res: Response) => {
   }
 });
 
-// PUT /api/students/:cpf - Update a student
+// PUT /api/students/:cpf - Update a student (basic info only)
 app.put('/api/students/:cpf', (req: Request, res: Response) => {
   try {
     const { cpf } = req.params;
-    const { name, email, evaluations } = req.body;
+    const { name, email } = req.body;
     
     if (!name || !email) {
       return res.status(400).json({ error: 'Name and email are required for update' });
     }
     
-    // Convert evaluations from JSON to Evaluation objects if provided
-    const evaluationObjects = evaluations 
-      ? evaluations.map((evaluation: any) => Evaluation.fromJSON(evaluation))
-      : [];
-    
-    // Create a complete Student object for update (cpf will be cleaned in Student constructor)
-    const updatedStudent = new Student(name, cpf, email, evaluationObjects);
+    // Create a Student object for update with empty evaluations (they won't be used anyway)
+    const updatedStudent = new Student(name, cpf, email, []);
     const result = studentSet.updateStudent(updatedStudent);
     res.json(result.toJSON());
   } catch (error) {
