@@ -1,16 +1,19 @@
 import { Student } from './Student';
 import { Enrollment } from './Enrollment';
+import { DefMedia } from './DefMedia';
 
 export class Class {
   private topic: string;
   private semester: number;
   private year: number;
+  private readonly defMedia: DefMedia;
   private enrollments: Enrollment[];
 
-  constructor(topic: string, semester: number, year: number, enrollments: Enrollment[] = []) {
+  constructor(topic: string, semester: number, year: number, defMedia: DefMedia, enrollments: Enrollment[] = []) {
     this.topic = topic;
     this.semester = semester;
     this.year = year;
+    this.defMedia = defMedia;
     this.enrollments = enrollments;
   }
 
@@ -47,6 +50,10 @@ export class Class {
 
   setYear(year: number): void {
     this.year = year;
+  }
+
+  getDefMedia(): DefMedia {
+    return this.defMedia;
   }
 
   // Enrollment management
@@ -93,12 +100,13 @@ export class Class {
       topic: this.topic,
       semester: this.semester,
       year: this.year,
+      defMedia: this.defMedia.toJSON(),
       enrollments: this.enrollments.map(enrollment => enrollment.toJSON())
     };
   }
 
   // Create Class from JSON object
-  static fromJSON(data: { topic: string; semester: number; year: number; enrollments: any[] }, allStudents: Student[]): Class {
+  static fromJSON(data: { topic: string; semester: number; year: number; defMedia: any, enrollments: any[] }, allStudents: Student[]): Class {
     const enrollments = data.enrollments
       ? data.enrollments.map((enrollmentData: any) => {
           const student = allStudents.find(s => s.getCPF() === enrollmentData.student.cpf);
@@ -109,6 +117,9 @@ export class Class {
         })
       : [];
     
-    return new Class(data.topic, data.semester, data.year, enrollments);
+    // Novo carregamento do DefMedia
+    const defMedia = DefMedia.fromJSON(data.defMedia);
+
+    return new Class(data.topic, data.semester, data.year, defMedia, enrollments);
   }
 }
