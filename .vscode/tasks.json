@@ -7,7 +7,7 @@
       "command": "npm",
       "args": ["install"],
       "options": {
-        "cwd": "${workspaceFolder}/server"
+        "cwd": "${workspaceFolder}/backend"
       },
       "group": "build",
       "presentation": {
@@ -23,7 +23,7 @@
       "command": "npm",
       "args": ["install"],
       "options": {
-        "cwd": "${workspaceFolder}/client"
+        "cwd": "${workspaceFolder}/frontend"
       },
       "group": "build",
       "presentation": {
@@ -48,7 +48,7 @@
       "command": "npm",
       "args": ["run", "dev"],
       "options": {
-        "cwd": "${workspaceFolder}/server"
+        "cwd": "${workspaceFolder}/backend"
       },
       "group": "build",
       "presentation": {
@@ -65,7 +65,7 @@
       "command": "npm",
       "args": ["start"],
       "options": {
-        "cwd": "${workspaceFolder}/client",
+        "cwd": "${workspaceFolder}/frontend",
         "env": {
           "PORT": "3004"
         }

@@ -3,9 +3,9 @@
 echo "🚀 Installing Student Management System Dependencies..."
 echo ""
 
-# Install server dependencies
-echo "📦 Installing server dependencies..."
-cd server
+# Install backend dependencies
+echo "📦 Installing backend dependencies..."
+cd backend
 npm install
 if [ $? -ne 0 ]; then
     echo "❌ Server installation failed"
@@ -14,9 +14,9 @@ fi
 echo "✅ Server dependencies installed successfully"
 echo ""
 
-# Install client dependencies
-echo "📦 Installing client dependencies..."
-cd ../client
+# Install frontend dependencies
+echo "📦 Installing frontend dependencies..."
+cd ../frontend
 npm install
 if [ $? -ne 0 ]; then
     echo "❌ Client installation failed"
@@ -34,9 +34,9 @@ echo "3. Select 'Launch Full Stack'"
 echo "4. Press F5 or click the play button"
 echo ""
 echo "Or start manually:"
-echo "Server: cd server && npm run dev"
-echo "Client: cd client && npm start"
+echo "Backend: cd backend && npm run dev"
+echo "Frontend: cd frontend && npm start"
 echo ""
 echo "URLs:"
-echo "Client: http://localhost:3004"
-echo "Server: http://localhost:3005"
+echo "Frontend: http://localhost:3004"
+echo "Backend: http://localhost:3005"

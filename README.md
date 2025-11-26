@@ -17,7 +17,7 @@ A full-stack TypeScript application for managing students with a React frontend 
 
 ```
 teaching-assistant-react/
-├── client/                 # React TypeScript frontend
+├── frontend/              # React TypeScript frontend
 │   ├── src/
 │   │   ├── components/     # React components
 │   │   │   ├── StudentForm.tsx
@@ -31,7 +31,7 @@ teaching-assistant-react/
 │   │   └── index.tsx      # Entry point
 │   ├── package.json
 │   └── tsconfig.json
-├── server/                # Node.js TypeScript backend
+├── backend/               # Node.js TypeScript backend
 │   ├── src/
 │   │   ├── models/        # Business logic classes
 │   │   │   ├── Student.ts    # Student class with validation
@@ -59,13 +59,13 @@ teaching-assistant-react/
 #### Option 2: Manual installation
 1. **Install server dependencies:**
    ```bash
-   cd server
+   cd backend
    npm install
    ```
 
 2. **Install client dependencies:**
    ```bash
-   cd client
+   cd frontend
    npm install
    ```
 
@@ -86,19 +86,19 @@ This will start both the server and client simultaneously.
 
 #### Option 2: Manual Start
 
-1. **Start the server:**
+1. **Start the backend:**
    ```bash
-   cd server
+   cd backend
    npm run dev
    ```
    Server runs on http://localhost:3005
 
-2. **Start the client (in a new terminal):**
+2. **Start the frontend (in a new terminal):**
    ```bash
-   cd client
+   cd frontend
    npm start
    ```
-   Client runs on http://localhost:3004
+   Frontend runs on http://localhost:3004
 
 ### Usage
 
@@ -157,10 +157,11 @@ The server provides a REST API:
 - TypeScript compiler
 - Hot reloading for both client and server
 
-## Port Configuration
 
-- **Server**: http://localhost:3005
-- **Client**: http://localhost:3004
+### Port Configuration
+
+- **Backend**: http://localhost:3005
+- **Frontend**: http://localhost:3004
 
 The application uses ports 3005 and 3004 to avoid conflicts with other applications that might be using ports 3000-3003.
 

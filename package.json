@@ -4,16 +4,16 @@
   "description": "Full-stack student management system with React frontend and Node.js backend",
   "private": true,
   "scripts": {
-    "install": "npm install --prefix server && npm install --prefix client",
-    "install:server": "npm install --prefix server",
-    "install:client": "npm install --prefix client",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "start": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "PORT=3005 npm run dev --prefix server",
-    "client": "PORT=3004 npm start --prefix client",
-    "build": "npm run build --prefix client",
-    "test": "npm test --prefix client",
-    "lint": "npm run lint --prefix client"
+    "install": "npm install --prefix backend && npm install --prefix frontend",
+    "install:backend": "npm install --prefix backend",
+    "install:frontend": "npm install --prefix frontend",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "start": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "PORT=3005 npm run dev --prefix backend",
+    "frontend": "PORT=3004 npm start --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "test": "npm test --prefix frontend",
+    "lint": "npm run lint --prefix frontend"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
@@ -29,7 +29,7 @@
   "author": "Paulo",
   "license": "ISC",
   "workspaces": [
-    "client",
-    "server"
+    "frontend",
+    "backend"
   ]
 }

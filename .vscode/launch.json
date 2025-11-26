@@ -6,16 +6,16 @@
       "request": "launch",
       "type": "chrome",
       "url": "http://localhost:3004",
-      "webRoot": "${workspaceFolder}/client/src",
+      "webRoot": "${workspaceFolder}/frontend/src",
       "sourceMaps": true
     },
     {
       "name": "Start React Client",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/client/node_modules/.bin/react-scripts",
+      "program": "${workspaceFolder}/frontend/node_modules/.bin/react-scripts",
       "args": ["start"],
-      "cwd": "${workspaceFolder}/client",
+      "cwd": "${workspaceFolder}/frontend",
       "console": "integratedTerminal",
       "env": {
         "BROWSER": "none",
@@ -26,9 +26,9 @@
       "name": "Start Node Server",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/server/node_modules/.bin/ts-node-dev",
+      "program": "${workspaceFolder}/backend/node_modules/.bin/ts-node-dev",
       "args": ["--respawn", "--transpile-only", "src/server.ts"],
-      "cwd": "${workspaceFolder}/server",
+      "cwd": "${workspaceFolder}/backend",
       "console": "integratedTerminal",
       "env": {
         "NODE_ENV": "development"
