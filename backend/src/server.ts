@@ -5,6 +5,7 @@ import { Student } from './models/Student';
 import { Evaluation } from './models/Evaluation';
 import { Classes } from './models/Classes';
 import { Class } from './models/Class';
+import { Goal } from './models/Goal';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -24,7 +25,11 @@ app.use(express.json());
 // In-memory storage with file persistence
 const studentSet = new StudentSet();
 const classes = new Classes();
-const dataFile = path.resolve('./data/app-data.json');
+const dataFile = process.env.APP_DATA_FILE
+  ? path.resolve(process.env.APP_DATA_FILE)
+  : process.env.NODE_ENV === 'test'
+  ? path.resolve('./data/app-data.test.json')
+  : path.resolve('./data/app-data.json');
 
 // Persistence functions
 const ensureDataDirectory = (): void => {
@@ -50,6 +55,8 @@ const saveDataToFile = (): void => {
           studentCPF: enrollment.getStudent().getCPF(),
           evaluations: enrollment.getEvaluations().map(evaluation => evaluation.toJSON())
         }))
+        ,
+        goals: classObj.getGoals().map(goal => goal.toJSON())
       }))
     };
     
@@ -89,28 +96,12 @@ const loadDataFromFile = (): void => {
       if (data.classes && Array.isArray(data.classes)) {
         data.classes.forEach((classData: any) => {
           try {
-            const classObj = new Class(classData.topic, classData.semester, classData.year);
+            // Use Class.fromJSON to load enrollments and goals consistently
+            const classObj = Class.fromJSON(
+              classData,
+              studentSet.getAllStudents()
+            );
             classes.addClass(classObj);
-
-            // Load enrollments for this class
-            if (classData.enrollments && Array.isArray(classData.enrollments)) {
-              classData.enrollments.forEach((enrollmentData: any) => {
-                const student = studentSet.findStudentByCPF(enrollmentData.studentCPF);
-                if (student) {
-                  const enrollment = classObj.addEnrollment(student);
-                  
-                  // Load evaluations for this enrollment
-                  if (enrollmentData.evaluations && Array.isArray(enrollmentData.evaluations)) {
-                    enrollmentData.evaluations.forEach((evalData: any) => {
-                      const evaluation = Evaluation.fromJSON(evalData);
-                      enrollment.addOrUpdateEvaluation(evaluation.getGoal(), evaluation.getGrade());
-                    });
-                  }
-                } else {
-                  console.error(`Student with CPF ${enrollmentData.studentCPF} not found for enrollment`);
-                }
-              });
-            }
           } catch (error) {
             console.error(`Error adding class ${classData.topic}:`, error);
           }
@@ -441,6 +432,122 @@ app.put('/api/classes/:classId/enrollments/:studentCPF/evaluation', (req: Reques
   }
 });
 
+// POST /api/classes/:sourceClassId/clone-goals/:destClassId - Clone evaluation goals from source class to destination class
+app.post('/api/classes/:sourceClassId/clone-goals/:destClassId', (req: Request, res: Response) => {
+  try {
+    const { sourceClassId, destClassId } = req.params;
+
+    const sourceClass = classes.findClassById(sourceClassId);
+    if (!sourceClass) {
+      return res.status(404).json({ error: 'Source class not found' });
+    }
+
+    const destClass = classes.findClassById(destClassId);
+    if (!destClass) {
+      return res.status(404).json({ error: 'Destination class not found' });
+    }
+
+    // Clone goals from source class to destination class
+    const sourceGoals = sourceClass.getGoals();
+    if (!sourceGoals || sourceGoals.length === 0) {
+      return res.status(400).json({
+        error: 'Source class has no goals to clone',
+        code: 'NO_SOURCE_GOALS'
+      });
+    }
+
+    const destGoals = destClass.getGoals();
+    if (destGoals && destGoals.length > 0) {
+      return res.status(409).json({
+        error: 'Destination class already has goals. This action would produce duplicate goals.',
+        code: 'DEST_HAS_GOALS'
+      });
+    }
+
+    // Perform clone using Class.cloneGoals -> returns new Goal instances with new ids
+    const cloned = sourceClass.cloneGoals();
+    // Add cloned goals to destination class
+    cloned.forEach(goal => destClass.addGoal(goal));
+
+    triggerSave(); // Save to file after cloning goals
+    res.status(200).json({
+      message: 'Goals cloned successfully',
+      clonedGoalsCount: cloned.length
+    });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Goals CRUD
+// GET /api/classes/:classId/goals
+app.get('/api/classes/:classId/goals', (req: Request, res: Response) => {
+  try {
+    const { classId } = req.params;
+    const classObj = classes.findClassById(classId);
+    if (!classObj) return res.status(404).json({ error: 'Class not found' });
+    res.json(classObj.getGoals().map(g => g.toJSON()));
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// POST /api/classes/:classId/goals
+app.post('/api/classes/:classId/goals', (req: Request, res: Response) => {
+  try {
+    const { classId } = req.params;
+    const { description, weight } = req.body;
+    if (!description || weight === undefined) return res.status(400).json({ error: 'Description and weight are required' });
+
+    const classObj = classes.findClassById(classId);
+    if (!classObj) return res.status(404).json({ error: 'Class not found' });
+
+    const goal = new Goal(description, weight);
+    const added = classObj.addGoal(goal);
+    triggerSave();
+    res.status(201).json(added.toJSON());
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
+  }
+});
+
+// PUT /api/classes/:classId/goals/:goalId
+app.put('/api/classes/:classId/goals/:goalId', (req: Request, res: Response) => {
+  try {
+    const { classId, goalId } = req.params;
+    const { description, weight } = req.body;
+    const classObj = classes.findClassById(classId);
+    if (!classObj) return res.status(404).json({ error: 'Class not found' });
+
+    try {
+      const updated = classObj.updateGoal(goalId, description, weight);
+      triggerSave();
+      res.json(updated.toJSON());
+    } catch (err) {
+      res.status(404).json({ error: 'Goal not found' });
+    }
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
+  }
+});
+
+// DELETE /api/classes/:classId/goals/:goalId
+app.delete('/api/classes/:classId/goals/:goalId', (req: Request, res: Response) => {
+  try {
+    const { classId, goalId } = req.params;
+    const classObj = classes.findClassById(classId);
+    if (!classObj) return res.status(404).json({ error: 'Class not found' });
+
+    const success = classObj.removeGoal(goalId);
+    if (!success) return res.status(404).json({ error: 'Goal not found' });
+
+    triggerSave();
+    res.status(204).send();
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
+  }
+});
+
 // POST api/classes/gradeImport/:classId, usado na feature de importacao de grades
 // Vai ser usado em 2 fluxos(poderia ter divido em 2 endpoints mas preferi deixar em apenas 1)
 // [Front] Upload → [Back] lê só o cabeçalho e retorna colunas da planilha e os goals da 'classId'
@@ -448,7 +555,11 @@ app.put('/api/classes/:classId/enrollments/:studentCPF/evaluation', (req: Reques
 app.post('/api/classes/gradeImport/:classId', upload_dir.single('file'), async (req: express.Request, res: express.Response) => {
   res.status(501).json({ error: "Endpoint ainda não implementado." });
 });
+// Only start server if executed directly - makes it easier to test using supertest/importing the app
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+export { app };

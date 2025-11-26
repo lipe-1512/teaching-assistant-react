@@ -7,6 +7,11 @@ import StudentList from './components/StudentList';
 import StudentForm from './components/StudentForm';
 import Evaluations from './components/Evaluations';
 import Classes from './components/Classes';
+import Layout from './components/Layout';
+import ClassList from './components/ClassList';
+import GoalsManagement from './components/GoalsManagement';
+import CloneGoalsForm from './components/CloneGoalsForm';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import './App.css';
 
 type TabType = 'students' | 'evaluations' | 'classes';
@@ -109,12 +114,73 @@ const App: React.FC = () => {
     setError(errorMessage);
   };
 
+  // Wrap older tab layout behind Route components. We'll provide pages for students, classes, and evaluations.
+  const StudentsPage = () => (
+    <>
+      {/* Class Selection */}
+      <div className="class-selection">
+        <label htmlFor="class-select">Filter by Class:</label>
+        <select
+          id="class-select"
+          value={selectedClass ? `${selectedClass.topic}-${selectedClass.year}-${selectedClass.semester}` : ''}
+          onChange={(e) => {
+            const classId = e.target.value;
+            if (classId) {
+              const classObj = classes.find(c => `${c.topic}-${c.year}-${c.semester}` === classId);
+              setSelectedClass(classObj || null);
+            } else {
+              setSelectedClass(null);
+            }
+          }}
+          className="class-selector"
+        >
+          <option value="">All Students</option>
+          {classes.map((classObj) => (
+            <option 
+              key={`${classObj.topic}-${classObj.year}-${classObj.semester}`}
+              value={`${classObj.topic}-${classObj.year}-${classObj.semester}`}
+            >
+              {classObj.topic} ({classObj.year}/{classObj.semester})
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <StudentForm
+        onStudentAdded={handleStudentAdded}
+        onStudentUpdated={handleStudentUpdated}
+        onError={handleError}
+        onCancel={editingStudent ? handleCancelEdit : undefined}
+        editingStudent={editingStudent}
+        selectedClass={selectedClass}
+      />
+
+      <StudentList
+        students={selectedClass ? selectedClass.enrollments.map(e => e.student) : students}
+        onStudentDeleted={handleStudentDeleted}
+        onEditStudent={handleEditClick}
+        onError={handleError}
+        loading={loading}
+      />
+    </>
+  );
+
+  const ClassGoalsPage: React.FC = () => {
+    const params = useParams();
+    const classId = params.classId || '';
+    return (
+      <div>
+        <h2>Manage Goals</h2>
+        <CloneGoalsForm destClassId={classId} onCloneSuccess={() => loadClasses()} />
+        <GoalsManagement classId={classId} />
+      </div>
+    );
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Teaching Assistant React</h1>
-        <p>Managing ESS student information</p>
-      </header>
+    <BrowserRouter>
+      <div className="App">
+      <Layout>
 
       <main className="App-main">
         {error && (
@@ -123,98 +189,19 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Tab Navigation */}
-        <div className="tab-navigation">
-          <button
-            className={`tab-button ${activeTab === 'students' ? 'active' : ''}`}
-            onClick={() => setActiveTab('students')}
-          >
-            Students
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'evaluations' ? 'active' : ''}`}
-            onClick={() => setActiveTab('evaluations')}
-          >
-            Evaluations
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'classes' ? 'active' : ''}`}
-            onClick={() => setActiveTab('classes')}
-          >
-            Classes
-          </button>
-        </div>
-
-        {/* Tab Content */}
-        <div className="tab-content">
-          {activeTab === 'students' && (
-            <>
-              {/* Class Selection */}
-              <div className="class-selection">
-                <label htmlFor="class-select">Filter by Class:</label>
-                <select
-                  id="class-select"
-                  value={selectedClass ? `${selectedClass.topic}-${selectedClass.year}-${selectedClass.semester}` : ''}
-                  onChange={(e) => {
-                    const classId = e.target.value;
-                    if (classId) {
-                      const classObj = classes.find(c => `${c.topic}-${c.year}-${c.semester}` === classId);
-                      setSelectedClass(classObj || null);
-                    } else {
-                      setSelectedClass(null);
-                    }
-                  }}
-                  className="class-selector"
-                >
-                  <option value="">All Students</option>
-                  {classes.map((classObj) => (
-                    <option 
-                      key={`${classObj.topic}-${classObj.year}-${classObj.semester}`}
-                      value={`${classObj.topic}-${classObj.year}-${classObj.semester}`}
-                    >
-                      {classObj.topic} ({classObj.year}/{classObj.semester})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <StudentForm
-                onStudentAdded={handleStudentAdded}
-                onStudentUpdated={handleStudentUpdated}
-                onError={handleError}
-                onCancel={editingStudent ? handleCancelEdit : undefined}
-                editingStudent={editingStudent}
-                selectedClass={selectedClass}
-              />
-
-              <StudentList
-                students={selectedClass ? selectedClass.enrollments.map(e => e.student) : students}
-                onStudentDeleted={handleStudentDeleted}
-                onEditStudent={handleEditClick}
-                onError={handleError}
-                loading={loading}
-              />
-            </>
-          )}
-
-          {activeTab === 'evaluations' && (
-            <Evaluations 
-              onError={handleError}
-            />
-          )}
-
-          {activeTab === 'classes' && (
-            <Classes
-              classes={classes}
-              onClassAdded={handleClassAdded}
-              onClassUpdated={handleClassUpdated}
-              onClassDeleted={handleClassDeleted}
-              onError={handleError}
-            />
-          )}
-        </div>
+        <Routes>
+          <Route path="/" element={<Navigate to="/students" replace />} />
+          <Route path="/students" element={<StudentsPage />} />
+          <Route path="/evaluations" element={<Evaluations onError={handleError} />} />
+          <Route path="/classes" element={<ClassList />} />
+          <Route path="/classes/:classId/goals" element={<ClassGoalsPage />} />
+          <Route path="/classes/manage" element={<Classes classes={classes} onClassAdded={handleClassAdded} onClassUpdated={handleClassUpdated} onClassDeleted={handleClassDeleted} onError={handleError} />} />
+        </Routes>
       </main>
+
+      </Layout>
     </div>
+    </BrowserRouter>
   );
 };
 

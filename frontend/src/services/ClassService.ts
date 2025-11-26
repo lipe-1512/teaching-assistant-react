@@ -68,13 +68,34 @@ class ClassService {
       const response = await fetch(`${API_BASE_URL}/api/classes/${classId}`, {
         method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to delete class');
       }
     } catch (error) {
       console.error('Error deleting class:', error);
+      throw error;
+    }
+  }
+
+  static async cloneGoals(sourceClassId: string, destClassId: string): Promise<{ message: string; clonedGoalsCount: number }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/classes/${sourceClassId}/clone-goals/${destClassId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to clone goals');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error cloning goals:', error);
       throw error;
     }
   }
