@@ -39,4 +39,5 @@ Feature: Clone Goals
     Given a destination class already has goals
     When I attempt to clone goals from another class
     Then the server should return a 409 or appropriate error indicating the destination already has goals
+    And the destination goals remain intact (no deletion or undesired modification)
 >>>>>>> dev
