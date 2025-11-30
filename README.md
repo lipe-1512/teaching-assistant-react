@@ -85,20 +85,28 @@ teaching-assistant-react/
 
 ### Running the Application
 
-#### Option 1: VS Code (Recommended)
-1. Open the project in VS Code
-2. Go to Run and Debug (Ctrl+Shift+D)
-3. Select "Launch Full Stack" from the dropdown
-4. Press F5 or click the play button
+#### Option 1: Production Mode (Single Port - Recommended for Demo)
+```bash
+npm start
+```
+- Builds the frontend and starts the server
+- Both frontend and backend run on **http://localhost:3005**
+- Open your browser manually at http://localhost:3005
 
-This will start both the backend and frontend simultaneously.
+#### Option 2: Development Mode (Two Ports - Recommended for Development)
+```bash
+npm run dev
+```
+- Runs backend on http://localhost:3005
+- Runs frontend on http://localhost:3004 (with hot-reload)
+- Browser opens automatically at http://localhost:3004
 
-#### Option 2: Manual Start
+#### Option 3: Manual Start (Advanced)
 
 1. **Start the backend:**
    ```bash
    cd backend
-   npm run dev
+   ts-node src/server.ts
    ```
    Backend runs on http://localhost:3005
 
@@ -111,7 +119,8 @@ This will start both the backend and frontend simultaneously.
 
 ### Usage
 
-1. Open http://localhost:3004 in your browser
+**Production Mode:** Open http://localhost:3005 in your browser
+**Development Mode:** Open http://localhost:3004 in your browser
 2. Use the form at the top to add new students
 3. Fill in Name, CPF (Brazilian format: 000.000.000-00), and Email
 4. Click "Add Student" to save
@@ -167,12 +176,23 @@ The backend provides a REST API:
 - Hot reloading for both frontend and backend
 
 
+### Available Scripts
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| **Production** | `npm start` | Build frontend + start server on port 3005 (both in one) |
+| **Development** | `npm run dev` | Run backend (3005) + frontend (3004) with hot-reload |
+| **Backend Only** | `npm run backend` | Start only the backend server |
+| **Frontend Only** | `npm run frontend` | Start only the frontend dev server |
+| **Build** | `npm run build` | Build frontend for production |
+| **Test** | `npm test` | Run frontend tests |
+
 ### Port Configuration
 
-- **Backend**: http://localhost:3005
-- **Frontend**: http://localhost:3004
-
-The application uses ports 3005 and 3004 to avoid conflicts with other applications that might be using ports 3000-3003.
+- **Production Mode**: http://localhost:3005 (Frontend + Backend together)
+- **Development Mode**: 
+  - Backend: http://localhost:3005
+  - Frontend: http://localhost:3004 (with hot-reload)
 
 ## License
 
