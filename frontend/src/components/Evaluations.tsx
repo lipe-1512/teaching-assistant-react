@@ -38,6 +38,15 @@ const Evaluations: React.FC<EvaluationsProps> = ({ onError }) => {
     try {
       setIsLoading(true);
       const classesData = await ClassService.getAllClasses();
+      console.log('🔍 [DEBUG] Classes loaded in Evaluations:', classesData.map(c => ({
+        id: c.id,
+        topic: c.topic,
+        year: c.year,
+        semester: c.semester,
+        goalsCount: c.goals?.length || 0,
+        hasGoalsField: 'goals' in c,
+        goalsIsArray: Array.isArray(c.goals)
+      })));
       setClasses(classesData);
     } catch (error) {
       onError(`Failed to load classes: ${(error as Error).message}`);
@@ -89,12 +98,12 @@ const Evaluations: React.FC<EvaluationsProps> = ({ onError }) => {
   // Clone goals handlers
   const handleCloneGoals = async () => {
     if (!selectedClassId || !sourceClassIdForCloning) {
-      onError('Please select both source and destination classes');
+      onError('❌ Please select both source and destination classes');
       return;
     }
 
     if (sourceClassIdForCloning === selectedClassId) {
-      onError('Source and destination classes cannot be the same');
+      onError('❌ Source and destination classes cannot be the same');
       return;
     }
 
@@ -104,19 +113,24 @@ const Evaluations: React.FC<EvaluationsProps> = ({ onError }) => {
       await ClassService.cloneGoals(sourceClassIdForCloning, selectedClassId);
       // Reload classes to get updated data
       await loadClasses();
-      onError(''); // Clear any previous errors
+      onError('✅ Goals cloned successfully!'); // Show success message
       setSourceClassIdForCloning('');
     } catch (error: any) {
       const errorMessage = error.message;
 
       // Check if it's a conflict (destination already has goals)
-      if (errorMessage.includes('already has evaluation goals')) {
-        setPendingCloneData({ sourceId: sourceClassIdForCloning, destId: selectedClassId });
-        setShowConfirmDialog(true);
+      if (errorMessage.includes('already has goals') || errorMessage.includes('already has evaluation goals') || errorMessage.includes('duplicate goals')) {
+        onError('❌ Destination class already has goals. Please delete existing goals first or use the "Reset All Goals" button in Goals Management.');
         return;
       }
 
-      onError(errorMessage);
+      // Check if source has no goals
+      if (errorMessage.includes('no goals')) {
+        onError('⚠️ The selected source class has no goals to clone. Please select a different class with goals defined.');
+        return;
+      }
+
+      onError(`❌ ${errorMessage}`);
     } finally {
       setIsCloning(false);
     }
@@ -214,19 +228,31 @@ const Evaluations: React.FC<EvaluationsProps> = ({ onError }) => {
             <h4>Clone Goals from Another Class</h4>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '10px' }}>
               <div>
-                <label htmlFor="sourceClassSelect" style={{ display: 'block', marginBottom: '5px' }}>Source Class:</label>
+                <label htmlFor="sourceClassSelect" style={{ display: 'block', marginBottom: '5px' }}>Source Class (select one with goals):</label>
                 <select
                   id="sourceClassSelect"
                   value={sourceClassIdForCloning}
                   onChange={(e) => setSourceClassIdForCloning(e.target.value)}
-                  style={{ padding: '5px', minWidth: '200px' }}
+                  style={{ padding: '5px', minWidth: '300px' }}
                 >
                   <option value="">-- Select source class --</option>
-                  {classes.filter(c => c.id !== selectedClassId).map((classObj) => (
-                    <option key={classObj.id} value={classObj.id}>
-                      {classObj.topic} ({classObj.year}/{classObj.semester})
-                    </option>
-                  ))}
+                  {classes
+                    .filter(c => c.id !== selectedClassId)
+                    .map((classObj) => {
+                      const goalsCount = classObj.goals?.length || 0;
+                      const hasGoals = goalsCount > 0;
+                      
+                      return (
+                        <option 
+                          key={classObj.id} 
+                          value={classObj.id}
+                          disabled={!hasGoals}
+                        >
+                          {classObj.topic} ({classObj.year}/{classObj.semester})
+                          {hasGoals ? ` ✅ ${goalsCount} goals` : ' ⚠️ No goals'}
+                        </option>
+                      );
+                    })}
                 </select>
               </div>
               <div style={{ alignSelf: 'flex-end' }}>
@@ -235,17 +261,22 @@ const Evaluations: React.FC<EvaluationsProps> = ({ onError }) => {
                   disabled={isCloning || !sourceClassIdForCloning}
                   style={{
                     padding: '8px 16px',
-                    backgroundColor: isCloning ? '#ccc' : '#007bff',
+                    backgroundColor: isCloning || !sourceClassIdForCloning ? '#ccc' : '#007bff',
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',
-                    cursor: isCloning ? 'not-allowed' : 'pointer'
+                    cursor: isCloning || !sourceClassIdForCloning ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {isCloning ? 'Cloning...' : 'Clone Goals'}
+                  {isCloning ? '⏳ Cloning...' : '🚀 Clone Goals'}
                 </button>
               </div>
             </div>
+            {classes.filter(c => c.id !== selectedClassId && c.goals && c.goals.length > 0).length === 0 && (
+              <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#fff3cd', color: '#856404', borderRadius: '4px', fontSize: '14px' }}>
+                ⚠️ No other classes with goals available. Create goals in another class first (use Goals tab).
+              </div>
+            )}
           </div>
 
           {/*Componente de importacao de notas de uma planilha, vai reagir as mudacas do classId */}
