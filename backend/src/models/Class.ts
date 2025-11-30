@@ -154,9 +154,10 @@ export class Class {
   static fromJSON(data: { topic: string; semester: number; year: number; enrollments: any[]; goals?: any[] }, allStudents: Student[]): Class {
     const enrollments = data.enrollments
       ? data.enrollments.map((enrollmentData: any) => {
-          const student = allStudents.find(s => s.getCPF() === enrollmentData.student.cpf);
+          const cpf = enrollmentData.studentCPF || enrollmentData.student?.cpf;
+          const student = allStudents.find(s => s.getCPF() === cpf);
           if (!student) {
-            throw new Error(`Student with CPF ${enrollmentData.student.cpf} not found`);
+            throw new Error(`Student with CPF ${cpf} not found`);
           }
           return Enrollment.fromJSON(enrollmentData, student);
         })
