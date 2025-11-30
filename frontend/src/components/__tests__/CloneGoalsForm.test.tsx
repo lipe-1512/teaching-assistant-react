@@ -23,11 +23,15 @@ describe('CloneGoalsForm', () => {
 
     render(<CloneGoalsForm destClassId="c2" onCloneSuccess={count => { /* noop */ }} />);
 
-    // wait for select to populate
-    await screen.findByRole('combobox');
+    // wait for select to populate with options
+    await waitFor(() => {
+      const options = screen.getAllByRole('option');
+      expect(options.length).toBeGreaterThan(0);
+    });
 
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'c1' } });
-    fireEvent.click(screen.getByText(/Clone Goals/i));
+    // Click the button to submit
+    const button = screen.getByRole('button', { name: /Clone Goals/i });
+    fireEvent.click(button);
 
     await waitFor(() => expect(mockedGoal.cloneGoals).toHaveBeenCalledWith('c1', 'c2'));
 

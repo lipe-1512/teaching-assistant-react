@@ -24,7 +24,7 @@ describe('GoalsManagement component', () => {
 
     mocked.getGoals.mockResolvedValueOnce([{ id: '1', description: 'New Goal', weight: 20, createdAt: new Date().toISOString() } as any]);
 
-    fireEvent.click(screen.getByText('Add Goal'));
+    fireEvent.click(screen.getByRole('button', { name: /Add Goal/i }));
 
     await waitFor(() => expect(mocked.addGoal).toHaveBeenCalledWith('c1', { description: 'New Goal', weight: 20 }));
 
