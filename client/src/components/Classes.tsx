@@ -4,6 +4,7 @@ import { Student } from '../types/Student';
 import ClassService from '../services/ClassService';
 import { studentService } from '../services/StudentService';
 import EnrollmentService from '../services/EnrollmentService';
+import { GoalService } from '../services/GoalService';
 import { DEFAULT_ESPECIFICACAO_DO_CALCULO_DE_MEDIA, EspecificacaoDoCalculoDaMedia } from '../types/EspecificacaoDoCalculoDaMedia';
 
 interface ClassesProps {
@@ -29,6 +30,8 @@ const Classes: React.FC<ClassesProps> = ({
   });
   const [editingClass, setEditingClass] = useState<Class | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [shouldCloneGoals, setShouldCloneGoals] = useState(false);
+  const [sourceClassForClone, setSourceClassForClone] = useState<string>('');
   
   // Student enrollment state
   const [allStudents, setAllStudents] = useState<Student[]>([]);
@@ -151,7 +154,17 @@ const Classes: React.FC<ClassesProps> = ({
         setEditingClass(null);
       } else {
         // Add new class
-        await ClassService.addClass(formData);
+        const newClass = await ClassService.addClass(formData);
+        
+        // Clone goals if requested
+        if (shouldCloneGoals && sourceClassForClone) {
+          try {
+            await GoalService.cloneGoals(newClass.id, sourceClassForClone);
+          } catch (cloneError) {
+            onError(`Class created but failed to clone goals: ${(cloneError as Error).message}`);
+          }
+        }
+        
         onClassAdded();
       }
       
@@ -162,6 +175,8 @@ const Classes: React.FC<ClassesProps> = ({
         year: new Date().getFullYear(),
         especificacaoDoCalculoDaMedia: DEFAULT_ESPECIFICACAO_DO_CALCULO_DE_MEDIA
       });
+      setShouldCloneGoals(false);
+      setSourceClassForClone('');
     } catch (error) {
       onError((error as Error).message);
     } finally {
@@ -189,6 +204,8 @@ const Classes: React.FC<ClassesProps> = ({
       year: new Date().getFullYear(),
       especificacaoDoCalculoDaMedia: DEFAULT_ESPECIFICACAO_DO_CALCULO_DE_MEDIA
     });
+    setShouldCloneGoals(false);
+    setSourceClassForClone('');
   };
 
   // Handle delete
@@ -260,6 +277,46 @@ const Classes: React.FC<ClassesProps> = ({
               </select>
             </div>
           </div>
+
+          {/* Clone Goals Section - Only shown when creating new class */}
+          {!editingClass && classes.length > 0 && (
+            <div className="form-row clone-goals-row">
+              <div className="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={shouldCloneGoals}
+                    onChange={(e) => {
+                      setShouldCloneGoals(e.target.checked);
+                      if (!e.target.checked) {
+                        setSourceClassForClone('');
+                      }
+                    }}
+                  />
+                  {' '}Clone goals from existing class
+                </label>
+              </div>
+              
+              {shouldCloneGoals && (
+                <div className="form-group">
+                  <label htmlFor="sourceClass">Source Class:</label>
+                  <select
+                    id="sourceClass"
+                    value={sourceClassForClone}
+                    onChange={(e) => setSourceClassForClone(e.target.value)}
+                    required={shouldCloneGoals}
+                  >
+                    <option value="">-- Select a class --</option>
+                    {classes.map((classObj) => (
+                      <option key={classObj.id} value={classObj.id}>
+                        {classObj.topic} ({classObj.year}/{classObj.semester})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="form-buttons">
             <button type="submit" disabled={isSubmitting} className="submit-btn">

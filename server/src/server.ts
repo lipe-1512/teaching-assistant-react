@@ -9,6 +9,8 @@ import { Report } from './models/Report';
 import * as fs from 'fs';
 import * as path from 'path';
 import { EspecificacaoDoCalculoDaMedia, DEFAULT_ESPECIFICACAO_DO_CALCULO_DA_MEDIA } from './models/EspecificacaoDoCalculoDaMedia';
+import { Goal, GoalValidator, CreateGoalRequest, UpdateGoalRequest } from './models/Goal';
+import { v4 as uuidv4 } from 'uuid';
 
 // usado para ler arquivos em POST
 const multer = require('multer');
@@ -52,7 +54,8 @@ const saveDataToFile = (): void => {
         enrollments: classObj.getEnrollments().map(enrollment => ({
           studentCPF: enrollment.getStudent().getCPF(),
           evaluations: enrollment.getEvaluations().map(evaluation => evaluation.toJSON())
-        }))
+        })),
+        goals: classObj.getGoals()
       }))
     };
     
@@ -92,7 +95,13 @@ const loadDataFromFile = (): void => {
       if (data.classes && Array.isArray(data.classes)) {
         data.classes.forEach((classData: any) => {
           try {
-            const classObj = new Class(classData.topic, classData.semester, classData.year, EspecificacaoDoCalculoDaMedia.fromJSON(classData.especificacaoDoCalculoDaMedia));
+            const classObj = new Class(
+              classData.topic, 
+              classData.semester, 
+              classData.year, 
+              EspecificacaoDoCalculoDaMedia.fromJSON(classData.especificacaoDoCalculoDaMedia),
+              classData.goals || []
+            );
             classes.addClass(classObj);
 
             // Load enrollments for this class
@@ -516,6 +525,152 @@ app.get('/api/classes/:classId/report', (req: Request, res: Response) => {
   }
 });
 
+// ==================== GOALS MANAGEMENT ROUTES ====================
+
+// GET /api/classes/:classId/goals - Get all goals for a class
+app.get('/api/classes/:classId/goals', (req: Request, res: Response) => {
+  try {
+    const { classId } = req.params;
+    
+    const classObj = classes.findClassById(classId);
+    if (!classObj) {
+      return res.status(404).json({ error: 'Class not found' });
+    }
+
+    res.json(classObj.getGoals());
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
+  }
+});
+
+// POST /api/classes/:classId/goals - Add a new goal to a class
+app.post('/api/classes/:classId/goals', (req: Request, res: Response) => {
+  try {
+    const { classId } = req.params;
+    const { description, weight }: CreateGoalRequest = req.body;
+    
+    const classObj = classes.findClassById(classId);
+    if (!classObj) {
+      return res.status(404).json({ error: 'Class not found' });
+    }
+
+    // Validate input
+    GoalValidator.validateDescription(description);
+    GoalValidator.validateWeight(weight);
+    
+    // Check total weight doesn't exceed 100%
+    GoalValidator.validateTotalWeight(classObj.getGoals(), weight);
+
+    const newGoal: Goal = {
+      id: uuidv4(),
+      description,
+      weight,
+      createdAt: new Date().toISOString()
+    };
+
+    classObj.addGoal(newGoal);
+    saveDataToFile();
+
+    res.status(201).json(newGoal);
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
+  }
+});
+
+// PUT /api/classes/:classId/goals/:goalId - Update a goal
+app.put('/api/classes/:classId/goals/:goalId', (req: Request, res: Response) => {
+  try {
+    const { classId, goalId } = req.params;
+    const updates: UpdateGoalRequest = req.body;
+    
+    const classObj = classes.findClassById(classId);
+    if (!classObj) {
+      return res.status(404).json({ error: 'Class not found' });
+    }
+
+    const goal = classObj.findGoalById(goalId);
+    if (!goal) {
+      return res.status(404).json({ error: 'Goal not found' });
+    }
+
+    // Validate updates
+    if (updates.description !== undefined) {
+      GoalValidator.validateDescription(updates.description);
+    }
+
+    if (updates.weight !== undefined) {
+      GoalValidator.validateWeight(updates.weight);
+      
+      // Calculate total weight excluding current goal
+      const otherGoals = classObj.getGoals().filter(g => g.id !== goalId);
+      GoalValidator.validateTotalWeight(otherGoals, updates.weight);
+    }
+
+    const updatedGoal = classObj.updateGoal(goalId, updates);
+    if (!updatedGoal) {
+      return res.status(404).json({ error: 'Goal not found' });
+    }
+
+    saveDataToFile();
+    res.json(updatedGoal);
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
+  }
+});
+
+// DELETE /api/classes/:classId/goals/:goalId - Delete a goal
+app.delete('/api/classes/:classId/goals/:goalId', (req: Request, res: Response) => {
+  try {
+    const { classId, goalId } = req.params;
+    
+    const classObj = classes.findClassById(classId);
+    if (!classObj) {
+      return res.status(404).json({ error: 'Class not found' });
+    }
+
+    const deleted = classObj.removeGoal(goalId);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Goal not found' });
+    }
+
+    saveDataToFile();
+    res.json({ message: 'Goal deleted successfully' });
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
+  }
+});
+
+// POST /api/classes/:destClassId/goals/clone - Clone goals from another class
+app.post('/api/classes/:destClassId/goals/clone', (req: Request, res: Response) => {
+  try {
+    const { destClassId } = req.params;
+    const { sourceClassId } = req.body;
+    
+    if (!sourceClassId) {
+      return res.status(400).json({ error: 'Source class ID is required' });
+    }
+
+    const destClass = classes.findClassById(destClassId);
+    if (!destClass) {
+      return res.status(404).json({ error: 'Destination class not found' });
+    }
+
+    const sourceClass = classes.findClassById(sourceClassId);
+    if (!sourceClass) {
+      return res.status(404).json({ error: 'Source class not found' });
+    }
+
+    destClass.cloneGoalsFrom(sourceClass);
+    saveDataToFile();
+
+    res.json({ 
+      message: 'Goals cloned successfully',
+      goalsCloned: destClass.getGoals().length 
+    });
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
+  }
+});
 
 // Export the app for testing
 export { app, studentSet, classes };
